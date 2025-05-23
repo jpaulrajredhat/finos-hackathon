@@ -1,0 +1,1 @@
+airflow dags output will be persisted in this local mount directory

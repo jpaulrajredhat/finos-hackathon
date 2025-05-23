@@ -1,0 +1,420 @@
+
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+
+# Basic Airflow cluster configuration for CeleryExecutor with Redis and PostgreSQL.
+#
+# WARNING: This configuration is for local development. Do not use it in a production deployment.
+#
+# This configuration supports basic configuration using environment variables or an .env file
+# The following variables are supported:
+#
+# AIRFLOW_IMAGE_NAME           - Docker image name used to run Airflow.
+#                                Default: apache/airflow:2.9.2
+# AIRFLOW_UID                  - User ID in Airflow containers
+#                                Default: 50000
+# AIRFLOW_PROJ_DIR             - Base path to which all the files will be volumed.
+#                                Default: .
+# Those configurations are useful mostly in case of standalone testing/running Airflow in test/try-out mode
+#
+# _AIRFLOW_WWW_USER_USERNAME   - Username for the administrator account (if requested).
+#                                Default: airflow
+# _AIRFLOW_WWW_USER_PASSWORD   - Password for the administrator account (if requested).
+#                                Default: airflow
+# _PIP_ADDITIONAL_REQUIREMENTS - Additional PIP requirements to add when starting all containers.
+#                                Use this option ONLY for quick checks. Installing requirements at container
+#                                startup is done EVERY TIME the service is started.
+#                                A better way is to build a custom image or extend the official image
+#                                as described in https://airflow.apache.org/docs/docker-stack/build.html.
+#                                Default: ''
+#
+# Feel free to modify this file to suit your needs.
+---
+x-airflow-common:
+  &airflow-common
+  # In order to add custom dependencies or upgrade provider packages you can use your extended image.
+  # Comment the image line, place your Dockerfile in the directory where you placed the docker-compose.yaml
+  # and uncomment the "build" line below, Then run `docker-compose build` to build the images.
+  image: ${AIRFLOW_IMAGE_NAME:-apache/airflow:2.9.2}
+  # build: .
+  environment:
+    &airflow-common-env
+    AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+    AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres/airflow
+    AIRFLOW__CELERY__BROKER_URL: redis://:@redis:6379/0
+    AIRFLOW__CORE__FERNET_KEY: ''
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
+    AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+    AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
+    AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
+    # _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-}
+    _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:- pandas openpyxl trino pyarrow boto3 }
+    MINIO_ENDPOINT: 'http://minio:9000'
+    MINIO_BUCKET: 'hackathon'
+    ACCESS_KEY: 'minioAdmin'
+    SECRET_KEY: 'minio1234'
+    RAW_XLS: '/tmp/data/single_family.xlsx'
+    PARQUET_FILE: '/tmp/output.parquet'
+    S3_OBJECT: 'staging/output.parquet'
+
+  volumes:
+    - ${AIRFLOW_PROJ_DIR:-.}/airflow/dags:/opt/airflow/dags
+    - ${AIRFLOW_PROJ_DIR:-.}/airflow/logs:/opt/airflow/logs
+    - ${AIRFLOW_PROJ_DIR:-.}/airflow/config:/opt/airflow/config
+    - ${AIRFLOW_PROJ_DIR:-.}/airflow/plugins:/opt/airflow/plugins
+    - ${AIRFLOW_PROJ_DIR:-.}/airflow/data:/tmp/data
+    - ${AIRFLOW_PROJ_DIR:-.}/airflow/output:/tmp/output
+  user: "${AIRFLOW_UID:-50000}:0"
+  depends_on:
+    &airflow-common-depends-on
+    redis:
+      condition: service_healthy
+    postgres:
+      condition: service_healthy
+
+services:
+  postgres:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - postgres-db-volume:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 10s
+      retries: 5
+      start_period: 5s
+    restart: always
+    networks:
+      hackathon_net:
+  redis:
+    image: redis:7.2-bookworm
+    expose:
+      - 6379
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 30s
+      retries: 50
+      start_period: 30s
+    restart: always
+    networks:
+      hackathon_net:
+  airflow-webserver:
+    <<: *airflow-common
+    command: webserver
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow-init:
+        condition: service_completed_successfully
+    networks:
+      hackathon_net:
+  airflow-scheduler:
+    <<: *airflow-common
+    command: scheduler
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8974/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow-init:
+        condition: service_completed_successfully
+    networks:
+      hackathon_net:
+  airflow-worker:
+    <<: *airflow-common
+    command: celery worker
+    healthcheck:
+      test:
+        - "CMD-SHELL"
+        - 'celery --app airflow.providers.celery.executors.celery_executor.app inspect ping -d "celery@$${HOSTNAME}" || celery --app airflow.executors.celery_executor.app inspect ping -d "celery@$${HOSTNAME}"'
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    environment:
+      <<: *airflow-common-env
+      DUMB_INIT_SETSID: "0"
+    restart: always
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow-init:
+        condition: service_completed_successfully
+    networks:
+      hackathon_net:
+  airflow-triggerer:
+    <<: *airflow-common
+    command: triggerer
+    healthcheck:
+      test: ["CMD-SHELL", 'airflow jobs check --job-type TriggererJob --hostname "$${HOSTNAME}"']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow-init:
+        condition: service_completed_successfully
+    networks:
+      hackathon_net:
+  airflow-init:
+    <<: *airflow-common
+    entrypoint: /bin/bash
+    # yamllint disable rule:line-length
+    command:
+      - -c
+      - |
+        if [[ -z "${AIRFLOW_UID}" ]]; then
+          echo
+          echo -e "\033[1;33mWARNING!!!: AIRFLOW_UID not set!\e[0m"
+          echo "If you are on Linux, you SHOULD follow the instructions below to set "
+          echo "AIRFLOW_UID environment variable, otherwise files will be owned by root."
+          echo "For other operating systems you can get rid of the warning with manually created .env file:"
+          echo "    See: https://airflow.apache.org/docs/apache-airflow/stable/howto/docker-compose/index.html#setting-the-right-airflow-user"
+          echo
+        fi
+        one_meg=1048576
+        mem_available=$$(($$(getconf _PHYS_PAGES) * $$(getconf PAGE_SIZE) / one_meg))
+        cpus_available=$$(grep -cE 'cpu[0-9]+' /proc/stat)
+        disk_available=$$(df / | tail -1 | awk '{print $$4}')
+        warning_resources="false"
+        if (( mem_available < 4000 )) ; then
+          echo
+          echo -e "\033[1;33mWARNING!!!: Not enough memory available for Docker.\e[0m"
+          echo "At least 4GB of memory required. You have $$(numfmt --to iec $$((mem_available * one_meg)))"
+          echo
+          warning_resources="true"
+        fi
+        if (( cpus_available < 2 )); then
+          echo
+          echo -e "\033[1;33mWARNING!!!: Not enough CPUS available for Docker.\e[0m"
+          echo "At least 2 CPUs recommended. You have $${cpus_available}"
+          echo
+          warning_resources="true"
+        fi
+        if (( disk_available < one_meg * 10 )); then
+          echo
+          echo -e "\033[1;33mWARNING!!!: Not enough Disk space available for Docker.\e[0m"
+          echo "At least 10 GBs recommended. You have $$(numfmt --to iec $$((disk_available * 1024 )))"
+          echo
+          warning_resources="true"
+        fi
+        if [[ $${warning_resources} == "true" ]]; then
+          echo
+          echo -e "\033[1;33mWARNING!!!: You have not enough resources to run Airflow (see above)!\e[0m"
+          echo "Please follow the instructions to increase amount of resources available:"
+          echo "   https://airflow.apache.org/docs/apache-airflow/stable/howto/docker-compose/index.html#before-you-begin"
+          echo
+        fi
+        mkdir -p /sources/logs /sources/dags /sources/plugins
+        chown -R "${AIRFLOW_UID}:0" /sources/{logs,dags,plugins}
+        exec /entrypoint airflow version
+    environment:
+      <<: *airflow-common-env
+      _AIRFLOW_DB_MIGRATE: 'true'
+      _AIRFLOW_WWW_USER_CREATE: 'true'
+      _AIRFLOW_WWW_USER_USERNAME: ${_AIRFLOW_WWW_USER_USERNAME:-airflow}
+      _AIRFLOW_WWW_USER_PASSWORD: ${_AIRFLOW_WWW_USER_PASSWORD:-airflow}
+      _PIP_ADDITIONAL_REQUIREMENTS: ''
+    user: "0:0"
+    volumes:
+      - ${AIRFLOW_PROJ_DIR:-.}:/sources
+    networks:
+      hackathon_net:
+  airflow-cli:
+    <<: *airflow-common
+    profiles:
+      - debug
+    environment:
+      <<: *airflow-common-env
+      CONNECTION_CHECK_MAX_COUNT: "0"
+    command:
+      - bash
+      - -c
+      - airflow
+    networks:
+      hackathon_net:
+  flower:
+    <<: *airflow-common
+    command: celery flower
+    profiles:
+      - flower
+    ports:
+      - "5555:5555"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:5555/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow-init:
+        condition: service_completed_successfully
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    environment:
+      MINIO_ROOT_USER: minioAdmin
+      MINIO_ROOT_PASSWORD: minio1234
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      hackathon_net:
+  create-bucket:
+    image: minio/mc
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      sleep 10 && 
+      mc alias set minio http://minio:9000 minioAdmin minio1234 && 
+      mc mb minio/hackathon/source || echo 'source Bucket already exists';
+      mc mb minio/hackathon/single_family/loans || echo 'single-family Bucket already exists';
+      "
+    networks:
+      hackathon_net:
+  trino:
+    image: quay.io/osclimate/trino:latest
+    container_name: trino
+    ports:
+      - "8081:8080"
+    
+    depends_on:
+      - minio
+    networks:
+      hackathon_net:
+    environment:
+      - TRINO_JVM_CONFIG=-Xmx4G
+      - CATALOG_MANAGEMENT=dynamic
+    volumes:
+      - ./trino/catalog/iceberg.properties:/etc/trino/catalog/iceberg.properties
+  hive-metastore:
+    image: quay.io/osclimate/hive-metastore:latest
+    container_name: hive-metastore
+    ports:
+      - "9083:9083"
+    environment:
+      - TRINO_JVM_CONFIG=-Xmx4G
+      - S3_ENDPOINT_URL=http://minio:9000
+      - S3_PREFIX=data
+      - S3_BUCKET=hackathon
+      - AWS_ACCESS_KEY_ID=minioAdmin
+      - AWS_SECRET_ACCESS_KEY=minio1234
+      - DATABASE_DB=hivemetadb
+      - DATABASE_HOST=hive-metastore-db
+      - DATABASE_PASSWORD=hivemeta123$
+      - DATABASE_PORT=5432
+      - DATABASE_USER=hive
+    networks:
+      hackathon_net:
+  hive-metastore-db:
+    image: quay.io/osclimate/postgresql-13:1-101
+    container_name: hive-metastore-db
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRESQL_ADMIN_PASSWORD=admin123$
+      - POSTGRESQL_DATABASE=hivemetadb
+      - POSTGRESQL_PASSWORD=hivemeta123$
+      - POSTGRESQL_USER=hive
+    networks:
+      hackathon_net:
+  jupyter:
+    build:
+      context: ./jupyter
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./jupyter:/workspace
+    depends_on:
+      - trino 
+    networks:
+        hackathon_net:
+  superset:
+    build:
+      context: ./superset
+      dockerfile: ./Dockerfile
+    ports:
+      - "8088:8088"
+    environment:
+      - SUPERSET_ENV=production
+      - SUPERSET_LOAD_EXAMPLES=no
+      - SUPERSET_SECRET_KEY=your_very_secret_key
+      - ADMIN_USERNAME=admin
+      - ADMIN_PASSWORD=admin
+      - ADMIN_FIRST_NAME=Superset
+      - ADMIN_LAST_NAME=Admin
+      - ADMIN_EMAIL=admin@superset.com
+    volumes:
+      - superset_home:/app/superset_home
+    restart: always
+    networks:
+        hackathon_net:
+    depends_on:
+      - superset_db
+    command: >
+      /bin/bash -c "
+        pip install pillow &&
+        superset db upgrade &&
+        superset fab create-admin --username admin --firstname Superset --lastname Admin --email admin@superset.com --password admin &&
+        superset init &&
+        superset run -h 0.0.0.0 -p 8088 --with-threads --reload
+      "
+  superset_db:
+    image: postgres:13
+    container_name: superset_db
+    environment:
+      - POSTGRES_DB=superset
+      - POSTGRES_USER=superset
+      - POSTGRES_PASSWORD=superset
+    volumes:
+      - superset_db_data:/var/lib/postgresql/data
+    restart: always
+    networks:
+        hackathon_net:
+volumes:
+  postgres-db-volume:
+  minio_data:
+  superset_home:
+  superset_db_data:
+networks:
+  hackathon_net:
+    driver: bridge

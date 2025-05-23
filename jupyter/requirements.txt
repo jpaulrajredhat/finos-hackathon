@@ -1,0 +1,5 @@
+jupyterlab
+pandas
+pyarrow
+trino
+tabulate

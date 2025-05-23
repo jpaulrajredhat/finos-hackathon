@@ -1,0 +1,76 @@
+[2025-05-23T22:18:13.283+0000] {local_task_job_runner.py:120} INFO - ::group::Pre task execution logs
+[2025-05-23T22:18:13.298+0000] {taskinstance.py:2076} INFO - Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: single_family_pipeline.insert_to_iceberg manual__2025-05-23T22:18:07.127594+00:00 [queued]>
+[2025-05-23T22:18:13.303+0000] {taskinstance.py:2076} INFO - Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: single_family_pipeline.insert_to_iceberg manual__2025-05-23T22:18:07.127594+00:00 [queued]>
+[2025-05-23T22:18:13.303+0000] {taskinstance.py:2306} INFO - Starting attempt 1 of 1
+[2025-05-23T22:18:13.310+0000] {taskinstance.py:2330} INFO - Executing <Task(PythonOperator): insert_to_iceberg> on 2025-05-23 22:18:07.127594+00:00
+[2025-05-23T22:18:13.313+0000] {warnings.py:112} WARNING - /home/***/.local/lib/python3.12/site-packages/***/task/task_runner/standard_task_runner.py:61: DeprecationWarning: This process (pid=147) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  pid = os.fork()
+
+[2025-05-23T22:18:13.314+0000] {standard_task_runner.py:63} INFO - Started process 149 to run task
+[2025-05-23T22:18:13.314+0000] {standard_task_runner.py:90} INFO - Running: ['***', 'tasks', 'run', 'single_family_pipeline', 'insert_to_iceberg', 'manual__2025-05-23T22:18:07.127594+00:00', '--job-id', '4', '--raw', '--subdir', 'DAGS_FOLDER/xls_parse_dag.py', '--cfg-path', '/tmp/tmpfkitzsfb']
+[2025-05-23T22:18:13.316+0000] {standard_task_runner.py:91} INFO - Job 4: Subtask insert_to_iceberg
+[2025-05-23T22:18:13.338+0000] {task_command.py:426} INFO - Running <TaskInstance: single_family_pipeline.insert_to_iceberg manual__2025-05-23T22:18:07.127594+00:00 [running]> on host d0e023f5c2a5
+[2025-05-23T22:18:13.373+0000] {taskinstance.py:2648} INFO - Exporting env vars: AIRFLOW_CTX_DAG_OWNER='***' AIRFLOW_CTX_DAG_ID='single_family_pipeline' AIRFLOW_CTX_TASK_ID='insert_to_iceberg' AIRFLOW_CTX_EXECUTION_DATE='2025-05-23T22:18:07.127594+00:00' AIRFLOW_CTX_TRY_NUMBER='1' AIRFLOW_CTX_DAG_RUN_ID='manual__2025-05-23T22:18:07.127594+00:00'
+[2025-05-23T22:18:13.373+0000] {taskinstance.py:430} INFO - ::endgroup::
+[2025-05-23T22:18:13.392+0000] {logging_mixin.py:188} INFO - Creating schema if not exists...
+[2025-05-23T22:18:14.232+0000] {logging_mixin.py:188} INFO - Reading schema from Parquet...
+[2025-05-23T22:18:14.264+0000] {logging_mixin.py:188} INFO - Schema SQL:
+[2025-05-23T22:18:14.264+0000] {logging_mixin.py:188} INFO -  reference_pool_id DOUBLE,
+loan_identifier BIGINT,
+monthly_reporting_period TIMESTAMP,
+channel VARCHAR,
+seller_name VARCHAR,
+servicer_name VARCHAR,
+master_servicer DOUBLE,
+original_interest_rate DOUBLE,
+current_interest_rate DOUBLE,
+original_upb DOUBLE,
+upb_at_issuance DOUBLE,
+current_actual_upb DOUBLE,
+original_loan_term DOUBLE,
+origination_date TIMESTAMP,
+first_payment_date TIMESTAMP,
+loan_age DOUBLE,
+remaining_months_to_legal_maturity DOUBLE,
+remaining_months_to_maturity DOUBLE,
+maturity_date TIMESTAMP,
+original_loan_to_value_ratio_ltv DOUBLE,
+original_combined_loan_to_value_ratio_cltv DOUBLE,
+number_of_borrowers DOUBLE,
+debt_to_income_dti DOUBLE,
+borrower_credit_score_at_origination DOUBLE,
+co_borrower_credit_score_at_origination DOUBLE,
+first_time_home_buyer_indicator VARCHAR,
+loan_purpose VARCHAR,
+property_type VARCHAR,
+number_of_units DOUBLE,
+occupancy_status VARCHAR,
+property_state VARCHAR,
+metropolitan_statistical_area_msa DOUBLE,
+zip_code_short DOUBLE,
+mortgage_insurance_percentage DOUBLE,
+amortization_type VARCHAR,
+prepayment_penalty_indicator VARCHAR,
+interest_only_loan_indicator VARCHAR,
+interest_only_first_principal_and_interest_payment_date TIMESTAMP,
+months_to_amortization DOUBLE,
+current_loan_delinquency_status DOUBLE,
+loan_payment_history DOUBLE,
+modification_flag VARCHAR
+[2025-05-23T22:18:14.264+0000] {logging_mixin.py:188} INFO - Creating Iceberg table if not exists...
+[2025-05-23T22:18:18.004+0000] {logging_mixin.py:188} INFO - Inserting data into Iceberg table...
+[2025-05-23T22:18:18.012+0000] {logging_mixin.py:188} INFO - Inserting batch of 100 records...
+[2025-05-23T22:18:27.158+0000] {logging_mixin.py:188} INFO - Inserting batch of 100 records...
+[2025-05-23T22:18:30.573+0000] {logging_mixin.py:188} INFO - Inserting batch of 100 records...
+[2025-05-23T22:18:36.670+0000] {logging_mixin.py:188} INFO - Inserting batch of 100 records...
+[2025-05-23T22:18:39.128+0000] {logging_mixin.py:188} INFO - Inserting batch of 100 records...
+[2025-05-23T22:18:41.594+0000] {logging_mixin.py:188} INFO - Inserting batch of 100 records...
+[2025-05-23T22:18:43.852+0000] {logging_mixin.py:188} INFO - Inserting batch of 100 records...
+[2025-05-23T22:18:49.303+0000] {logging_mixin.py:188} INFO - Inserting batch of 57 records...
+[2025-05-23T22:18:51.544+0000] {logging_mixin.py:188} INFO - Insert completed.
+[2025-05-23T22:18:51.544+0000] {python.py:237} INFO - Done. Returned value was: None
+[2025-05-23T22:18:51.545+0000] {taskinstance.py:441} INFO - ::group::Post task execution logs
+[2025-05-23T22:18:51.555+0000] {taskinstance.py:1206} INFO - Marking task as SUCCESS. dag_id=single_family_pipeline, task_id=insert_to_iceberg, run_id=manual__2025-05-23T22:18:07.127594+00:00, execution_date=20250523T221807, start_date=20250523T221813, end_date=20250523T221851
+[2025-05-23T22:18:51.585+0000] {local_task_job_runner.py:240} INFO - Task exited with return code 0
+[2025-05-23T22:18:51.594+0000] {taskinstance.py:3503} INFO - 0 downstream tasks scheduled from follow-on schedule check
+[2025-05-23T22:18:51.595+0000] {local_task_job_runner.py:222} INFO - ::endgroup::
