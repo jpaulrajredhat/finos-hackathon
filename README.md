@@ -72,7 +72,7 @@ finos-hackathon/
 As part of the ETL pipeline, we standardize and clean incoming data using the following rules:
 
 ### Field Mappings
-
+```
 | Field                       | Raw Value | Transformed Value             |
 |-----------------------------|-----------|-------------------------------|
 | **Channel**                 | R         | Retail                        |
@@ -89,9 +89,9 @@ As part of the ETL pipeline, we standardize and clean incoming data using the fo
 |                             | N         | Refinance - No Cash Out       |
 |                             | R         | Refinance - Not Specified     |
 |                             | 9         | Not Available                 |
-
+```
 ### Extracted Fields
-
+```
 The following **key fields** are cleansed and  extracted from the from source and persisted in S3 bucket:
 
 ```python
@@ -111,7 +111,7 @@ REQUIRED_COLUMNS = [
     "Months to Amortization", "Current Loan Delinquency Status", "Loan Payment History",
     "Modification Flag"
 ]
-
+```
 ## Getting Started
 
 ### 1. Clone the repo
