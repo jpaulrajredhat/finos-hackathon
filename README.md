@@ -124,7 +124,7 @@ docker-compose up -d
 ```
 
 # Url enf point for all the components
-
+```
 | Service          | URL                                            |credentials)
 |                                                                   | userid-passowrd   
 | ---------------- | ---------------------------------------------- |-----------------
@@ -133,3 +133,4 @@ docker-compose up -d
 | Superset         | [http://localhost:8088](http://localhost:8088) | admin/admin
 | MinIO Console    | [http://localhost:9001](http://localhost:9001) | minioAdmin/minio1234
 | Trino UI         | [http://localhost:8081](http://localhost:8081) | Admin / NA
+```
