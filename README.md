@@ -47,8 +47,8 @@ Python (Optional)	3.9+	Run local scripts/debug steps
 [ Superset ] ← Build Dashboards
 
 ## Project Structure
-
-data-mesh-hackathon/
+```
+finos-hackathon/
 ├── airflow/ # Airflow DAGs and config
 ├── notebooks/ # Jupyter notebooks
 ├── dashboards/ # Superset dashboards (optional exports)
@@ -58,7 +58,7 @@ data-mesh-hackathon/
 ├── scripts/
 │ └── transform.py # Business logic for transformation
 ├── README.md # This file
-
+```
 ## Pipeline Flow
 1. **Airflow DAG** triggers on new XLS files.
 2. Applies **data transformation and business rules** (via Python script).
