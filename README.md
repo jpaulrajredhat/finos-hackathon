@@ -117,8 +117,8 @@ REQUIRED_COLUMNS = [
 ### 1. Clone the repo
 
 ```bash
-git clone https://github.com/your-org/data-mesh-hackathon.git
-cd data-mesh-hackathon
+git clone https://github.com/your-org/finos-hackathon.git
+cd finos-hackathon
 
 docker-compose up -d
 ```
