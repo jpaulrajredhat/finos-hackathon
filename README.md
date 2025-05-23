@@ -37,7 +37,7 @@ Python (Optional)	3.9+	Run local scripts/debug steps
 
 
 ## Architecture Overview
-
+```
 [ Airflow ] --> [ XLS Processing + Transform ]
 ↓
 [ Trino ]   → [ Write to Iceberg / MinIO ]
@@ -45,7 +45,7 @@ Python (Optional)	3.9+	Run local scripts/debug steps
 [ Jupyter Notebook ] ← View & Analyze
 ↓
 [ Superset ] ← Build Dashboards
-
+```
 ## Project Structure
 ```
 finos-hackathon/
