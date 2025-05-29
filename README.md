@@ -156,3 +156,5 @@ docker-compose up --no-build
 | Superset         | [http://localhost:8088](http://localhost:8088) | admin/admin
 | MinIO Console    | [http://localhost:9001](http://localhost:9001) | minioAdmin/minio1234
 | Trino UI         | [http://localhost:8081](http://localhost:8081) | Admin / NA
+| Marquez Data     | [http://localhost:3000](http://localhost:3000) | N/A
+  Lineage UI  
