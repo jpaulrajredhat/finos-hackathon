@@ -27,6 +27,7 @@ Operating System: macOS, Linux, or Windows
 
 Memory: minimum 8 GB RAM allocated to Docker
 
+
 ## Tools
 Tool	    Version (Recommended)
 Docker	    20.10+	Container runtime
@@ -118,10 +119,32 @@ REQUIRED_COLUMNS = [
 
 ```bash
 git clone https://github.com/your-org/data-mesh-hackathon.git
-cd data-mesh-hackathon
 
-docker-compose up -d
+cd data-mesh-hackathon
 ```
+# Run docker compose 
+
+This project supports fully offline deployment using pre-saved Docker images (docker_images.tar attached to the project). Follow these steps to load images and run the docker compose without pulling images from internet .
+
+```bash
+
+./load_docker_images.sh
+
+```
+This script will:
+
+Load images from docker_images.tar
+
+Start Docker Compose using only local images , Avoid pulling from the internet or rebuilding
+
+Once all images are loaded,  run the docker compose 
+
+```bash
+
+docker-compose up --no-build
+
+```
+
 
 # Url enf point for all the components
 

@@ -1,1 +1,0 @@
-all airflow logs will be persisted in this log file mounted to host local](README.md)

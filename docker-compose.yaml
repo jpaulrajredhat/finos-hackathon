@@ -52,7 +52,7 @@ x-airflow-common:
   # and uncomment the "build" line below, Then run `docker-compose build` to build the images.
   image: ${AIRFLOW_IMAGE_NAME:-apache/airflow:2.9.2}
   # build: .
-  environment:
+  environment:  
     &airflow-common-env
     AIRFLOW__CORE__EXECUTOR: CeleryExecutor
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
@@ -63,8 +63,14 @@ x-airflow-common:
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
     AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
+    AIRFLOW__OPENLINEAGE__TRANSPORT: '{"type": "http", "url": "http://api:5000", "endpoint": "api/v1/lineage"}'
+    # AIRFLOW__OPENLINEAGE__CONFIG_PATH: '/tmp/openlineage.yml'
+    AIRFLOW__OPENLINEAGE__NAMESPACE: 'hackathon-airflow-namespace'
+    AIRFLOW__OPENLINEAGE__EXECUTION_TIMEOUT: 60
+    AIRFLOW__OPENLINEAGE__INCLUDE_FULL_TASK_INFO: true
+    AIRFLOW__OPENLINEAGE__DEBUG_MODE: true
     # _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-}
-    _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:- pandas openpyxl trino pyarrow boto3 }
+    _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:- pandas openpyxl trino pyarrow boto3 apache-airflow-providers-openlineage }
     MINIO_ENDPOINT: 'http://minio:9000'
     MINIO_BUCKET: 'hackathon'
     ACCESS_KEY: 'minioAdmin'
@@ -75,7 +81,7 @@ x-airflow-common:
 
   volumes:
     - ${AIRFLOW_PROJ_DIR:-.}/airflow/dags:/opt/airflow/dags
-    - ${AIRFLOW_PROJ_DIR:-.}/airflow/logs:/opt/airflow/logs
+    - ${AIRFLOW_PROJ_DIR:-.}/logs:/opt/airflow/logs
     - ${AIRFLOW_PROJ_DIR:-.}/airflow/config:/opt/airflow/config
     - ${AIRFLOW_PROJ_DIR:-.}/airflow/plugins:/opt/airflow/plugins
     - ${AIRFLOW_PROJ_DIR:-.}/airflow/data:/tmp/data
@@ -349,7 +355,7 @@ services:
     image: quay.io/osclimate/postgresql-13:1-101
     container_name: hive-metastore-db
     ports:
-      - "5432:5432"
+      - "5433:5432"
     environment:
       - POSTGRESQL_ADMIN_PASSWORD=admin123$
       - POSTGRESQL_DATABASE=hivemetadb
@@ -358,8 +364,9 @@ services:
     networks:
       hackathon_net:
   jupyter:
-    build:
-      context: ./jupyter
+    image: quay.io/osclimate/finos-hackathon-jupyter:latest
+    # build:
+    #   context: ./jupyter
     ports:
       - "8888:8888"
     volumes:
@@ -369,9 +376,10 @@ services:
     networks:
         hackathon_net:
   superset:
-    build:
-      context: ./superset
-      dockerfile: ./Dockerfile
+    # build:
+    #   context: ./superset
+    #   dockerfile: ./Dockerfile
+    image: quay.io/osclimate/superset:latest
     ports:
       - "8088:8088"
     environment:
@@ -410,11 +418,74 @@ services:
     restart: always
     networks:
         hackathon_net:
+
+  db:
+    image: postgres:14
+    container_name: marquez-db
+    environment:
+      POSTGRES_USER: marquez
+      POSTGRES_PASSWORD: marquez
+      POSTGRES_DB: marquez
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-conf:/etc/postgresql
+      - db-init:/docker-entrypoint-initdb.d
+      - db-backup:/var/lib/postgresql/data
+    command: ["postgres", "-c", "log_statement=all"]
+
+    networks:
+      hackathon_net:
+  api:
+    image: marquezproject/marquez:latest
+    container_name: marquez-api
+    depends_on:
+      - db
+    ports:
+      # - "5001:5000"
+      - "5002:5000"
+      - "5001:5001"
+    environment:
+      MARQUEZ_DB_HOST: db
+      MARQUEZ_DB_PORT: 5432
+      MARQUEZ_DB_USER: marquez
+      MARQUEZ_DB_PASSWORD: marquez
+      MARQUEZ_DB_NAME: marquez
+      POSTGRES_PORT: 5432
+      POSTGRES_HOST: db
+    restart: unless-stopped
+    networks:
+        hackathon_net:
+  web:
+    image: marquezproject/marquez-web:latest
+    container_name: marquez-web
+    
+    depends_on:
+      - api
+    ports:
+      - "3000:3000"
+    environment:
+      MARQUEZ_BASE_URL: http://api:5000
+      MARQUEZ_HOST: api
+      MARQUEZ_ADMIN_PORT: 5001
+      MARQUEZ_PORT: 5000
+      POSTGRES_PORT: 5432
+      POSTGRES_HOST: db
+      WEB_PORT: 3000
+      REACT_APP_ADVANCED_SEARCH: false
+    networks:
+        hackathon_net:
+
 volumes:
   postgres-db-volume:
   minio_data:
   superset_home:
   superset_db_data:
+  marquez-db-data:
+  db-init:
+  db-conf:
+  db-backup:
+  data:
 networks:
   hackathon_net:
     driver: bridge
