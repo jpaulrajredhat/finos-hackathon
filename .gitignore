@@ -6,3 +6,4 @@ __pycahe__
 /dags
 /logs
 /plugins
+docker_images.tar
