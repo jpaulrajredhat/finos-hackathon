@@ -124,20 +124,42 @@ cd data-mesh-hackathon
 ```
 # Run docker compose 
 
-This project supports fully offline deployment using pre-saved Docker images (docker_images.tar attached to the project). Follow these steps to load images and run the docker compose without pulling images from internet .
+This deployment requires an active internet connection to pull container images from the Quay image repository.
+
+If your system does not have internet access, please follow the Offline Deployment Guide for instructions on how to proceed without an internet connection.
+
+
+```bash
+
+docker-compose up 
+
+```
+
+# Offline deployment 
+
+This project supports **fully offline deployment** using pre-saved Docker images.
+
+  Note: The docker_images.tar file will be provided during the hackathon.
+
+## Steps for Offline Deployment:
+
+1. Run the following script to load images and start the application:
 
 ```bash
 
 ./load_docker_images.sh
 
 ```
-This script will:
+2.  This script will:
 
-Load images from docker_images.tar
+    Load Docker images from docker_images.tar
 
-Start Docker Compose using only local images , Avoid pulling from the internet or rebuilding
+    Start Docker Compose using only local images
 
-Once all images are loaded,  run the docker compose 
+    Avoid pulling from the internet or rebuilding any services
+
+2.  Alternatively, once the images are loaded, you can manually start the application with:
+
 
 ```bash
 
@@ -145,6 +167,7 @@ docker-compose up --no-build
 
 ```
 
+This ensures the entire deployment runs without requiring an internet connection.
 
 # Url enf point for all the components
 
