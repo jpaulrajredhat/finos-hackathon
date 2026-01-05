@@ -1,6 +1,6 @@
-# Data Mesh Hackathon Workshop
+# Open Mortgage Data Pipeline
 
-Welcome to the **Data Mesh Hackathon**! This workshop demonstrates how to build a modular, scalable, and collaborative data platform using modern open-source components.
+Welcome to the **Open Mortgage Data Pipeline**! This repo demonstrates how to build a modular, scalable, and collaborative loan data platform using modern open-source components.
 
 ## Tech Stack
 
